@@ -21,23 +21,56 @@ import random
 # se estiver usando windows, o gerenciador de dispositivos informa a porta
 
 #use uma das 3 opcoes para atribuir à variável a porta usada
-#serialName = "/dev/ttyACM0"           # Ubuntu (variacao de)
+#serialName = "/dev/ttyACM8"           # Ubuntu (variacao de)
 #serialName = "/dev/tty.usbmodem1411" # Mac    (variacao de)
 serialName = "COM8"                  # Windows(variacao de)
+def temporizador(com1):
+    tempo_inicial = time.time()
+    while True:
+        tempo_atual = time.time()
+        tempo_passado = tempo_atual - tempo_inicial
+        sinal = com1.rx.getIsEmpty()
+        txLen = 1
+        if sinal == False:
+            rxBuffer, nRx = com1.getData(txLen) #u get all buffer
+            break
+        if tempo_passado > 5:
+            print("Tempo limite excedido!!")
+            com1.disable()  
+            break
 
-comandos = {
-    1: b"\x00\x00\x00\x00\n",
-    2: b"\x00\x00\xFF\x00\n",
-    3: b"\xFF\x00\x00\n",
-    4: b"\x00\xFF\x00\n",
-    5: b"\x00\x00\xFF\n",
-    6: b"\x00\xFF\n",
-    7: b"\xFF\x00\n",
-    8: b"\x00\n",
-    9: b"\xFF\n"
-}
-def contador_tempo():
-    tempo_inicial = time.time()  
+def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload):
+    head = b""
+    match tipo:
+        case 1:
+            head+=b"\x01"
+            head+=b"\xa9"
+            head+=num_pacotes.to_bytes(2,byteorder="big")
+            head+=b"\x00\x00\x00\x00\x00\x00\x00"
+        case 3:
+            head+=b"\x03"
+            head+=n_pacote_enviado.to_bytes(2,byteorder="big")
+            head+=tamanho_payload.to_bytes(2,byteorder="big")
+            head+=b"\x00\x00\x00\x00\x00\x00\x00"
+        case 5:
+            head+=b"\x05"
+            head+=b"\xa9"
+            head+=b"\x00\x00\x00\x00\x00\x00\x00\x00"
+    return head
+
+def pegar_payload(array_bytes):
+    if len(array_bytes) >= 140:
+        payload = array_bytes[0:140]
+        array_bytes = array_bytes[140:]
+        return payload, array_bytes
+    else:
+        payload = array_bytes
+        array_bytes = b""
+        return payload, array_bytes
+    
+def constroi_eop():
+    return b"\xAA\xBB\xAA\xBB"
+
 def main():
     try:
         print("Iniciou o main")
@@ -45,6 +78,7 @@ def main():
         #para declarar esse objeto é o nome da porta.
         com1 = enlace(serialName)
         com1.enable()
+        ultimo_enviado = b""
         
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
@@ -54,80 +88,61 @@ def main():
         time.sleep(.1)
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
+        acabou = False
+        byteslactea = open("img_lactea.jpg_large", "rb").read()
         
-        
-                  
-        #aqui você deverá gerar os dados a serem transmitidos. 
-        #seus dados a serem transmitidos são um array bytes a serem transmitidos. Gere esta lista com o 
-        #nome de txBuffer. Esla sempre irá armazenar os dados a serem enviados.
-        n = random.randint(10,30)
-          #time.sleep(2)
-        mandar = b''
-        for i in range(n):
-            x = random.randint(1,9)
-            #if i==0:
-            #    com1.sendData(comandos[10])
-            #if i == n-1:
-                #com1.sendData(comandos[10])
-            mandar += comandos[x]
-         #   print("estou enviando o comando {}".format(x))
-        #print(len(mandar))
-        #print((len(mandar)).to_bytes(1,byteorder='big'))
-        com1.sendData(np.asarray(len(mandar).to_bytes(2,byteorder='big')))  #as array apenas como boa pratica para casos de ter uma outra forma de dados
-        time.sleep(1)
-        com1.sendData(mandar)
-        print(f"enviei {n} comandos")
+        if len(byteslactea) % 140>0:
+            num_pacotes = len(byteslactea)//140 + 1       
+        else:
+            num_pacotes = len(byteslactea)//140
 
-        #print("meu array de bytes tem tamanho {}" .format(len(txBuffer)))
-        #faça aqui uma conferência do tamanho do seu txBuffer, ou seja, quantos bytes serão enviados.
-        tempo_inicial = time.time()
-        while True:
-            tempo_atual = time.time()
-            tempo_passado = tempo_atual - tempo_inicial
-            sinal = com1.rx.getIsEmpty()
-            txLen = 1
-            if sinal == False:
-                rxBuffer, nRx = com1.getData(txLen) #u get all buffer
-                break
-            if tempo_passado > 5:
-                print("Tempo limite excedido!!")
-                com1.disable()  
-                break
-        if sinal==False:   
-            valor = int.from_bytes(rxBuffer, byteorder='big')
-            print(f"Valor recebido: {valor}\nValor esperado: {n}")
-            if valor==n:
-                print("SUCESSO")
-            else:
-                print("Erro ao receber comando") 
-
-        #faça aqui uma conferência do tamanho do seu rxBuffer, ou seja, quantos bytes foram recebidos.
-          
-        #finalmente vamos transmitir os todos. Para isso usamos a funçao sendData que é um método da camada enlace.
-        #faça um print para avisar que a transmissão vai começar.
-        #tente entender como o método send funciona!
-        #Cuidado! Apenas trasmita arrays de bytes!
-          
-        # A camada enlace possui uma camada inferior, TX possui um método para conhecermos o status da transmissão
-        # O método não deve estar fincionando quando usado como abaixo. deve estar retornando zero. Tente entender como esse método funciona e faça-o funcionar.
-        
-        
-        #txSize = com1.tx.getStatus()
-        #print('enviou = {}' .format(txSize))
-        
-        #Agora vamos iniciar a recepção dos dados. Se algo chegou ao RX, deve estar automaticamente guardado
-        #Observe o que faz a rotina dentro do thread RX
-        #print um aviso de que a recepção vai começar.
-        
-        #Será que todos os bytes enviados estão realmente guardadas? Será que conseguimos verificar?
-        #Veja o que faz a funcao do enlaceRX  getBufferLen
-      
-        #acesso aos bytes recebidos
-        
-
-            
-    
-        # Encerra comunicação
+        #envia o tipo 1
+        enviar = constroi_head(1,num_pacotes,0,0)+constroi_eop()
+        com1.sendData(enviar)
+        header,nr1 = com1.getData(10)
+        tipo = int.from_bytes(header[0], byteorder='big')
+        if tipo == 2:
+            print("Pode começar a enviar os pacotes")
+        else:
+            print("Erro! Tipo 2 não recebido")
+            com1.disable()
+        n_pacote = 1
+        teve_problema = False
+        acabou = False
+        #Começa a enviar os pacotes	
+        while acabou == False:
+            if n_pacote == num_pacotes:
+                acabou = True
+            payload, byteslactea = pegar_payload(byteslactea)
+            mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
+            ultimo_enviado = mensagem
+            com1.sendData(mensagem)
+            header,nr1 = com1.getData(10)
+            tipo = int.from_bytes(header[0], byteorder='big')
+            if tipo == 6:
+                print("Erro! Tipo 6 recebido")
+                teve_problema = True
+            eop,nr1 = com1.getData(4)
+            if eop != constroi_eop():
+                print("Erro no EOP")
+                teve_problema = True
+            if tipo == 4:
+                print("Pacote recebido com sucesso")
+                n_pacote += 1
+            while teve_problema == True:
+                com1.sendData(ultimo_enviado)
+                header,nr1 = com1.getData(10)
+                tipo = int.from_bytes(header[0], byteorder='big')
+                eop,nr1 = com1.getData(4)
+                if eop != constroi_eop():
+                    print("Erro no EOP")
+                    teve_problema = True
+                elif tipo == 6:
+                    print("Erro! Tipo 6 recebido")
+                    teve_problema = True
+                else:
+                    teve_problema = False
+         # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")
         print("-------------------------")
