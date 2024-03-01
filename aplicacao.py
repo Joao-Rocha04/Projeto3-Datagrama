@@ -38,7 +38,6 @@ def temporizador(com1):
             print("Tempo limite excedido!!")
             com1.disable()  
             break
-
 def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload):
     head = b""
     match tipo:
@@ -89,7 +88,7 @@ def main():
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
         acabou = False
-        byteslactea = open("img_lactea.jpg_large", "rb").read()
+        byteslactea = open("lactea.jpg_large", "rb").read()
         
         if len(byteslactea) % 140>0:
             num_pacotes = len(byteslactea)//140 + 1       
