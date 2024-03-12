@@ -44,12 +44,12 @@ def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload):
         case 1:
             head+=b"\x01"
             head+=b"\xa9"
-            head+=num_pacotes.to_bytes(2,byteorder="big")
+            head+=num_pacotes.to_bytes(1,byteorder="big")
             head+=b"\x00\x00\x00\x00\x00\x00\x00"
         case 3:
             head+=b"\x03"
-            head+=n_pacote_enviado.to_bytes(2,byteorder="big")
-            head+=tamanho_payload.to_bytes(2,byteorder="big")
+            head+=n_pacote_enviado.to_bytes(1,byteorder="big")
+            head+=tamanho_payload.to_bytes(1,byteorder="big")
             head+=b"\x00\x00\x00\x00\x00\x00\x00"
         case 5:
             head+=b"\x05"
@@ -87,60 +87,65 @@ def main():
         time.sleep(.1)
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
-        acabou = False
-        byteslactea = open("lactea.jpg_large", "rb").read()
-        
-        if len(byteslactea) % 140>0:
-            num_pacotes = len(byteslactea)//140 + 1       
-        else:
-            num_pacotes = len(byteslactea)//140
-
-        #envia o tipo 1
-        enviar = constroi_head(1,num_pacotes,0,0)+constroi_eop()
-        com1.sendData(enviar)
-        header,nr1 = com1.getData(10)
-        tipo = int.from_bytes(header[0], byteorder='big')
-        if tipo == 2:
-            print("Pode começar a enviar os pacotes")
-        else:
-            print("Erro! Tipo 2 não recebido")
-            com1.disable()
-        n_pacote = 1
-        teve_problema = False
-        acabou = False
-        #Começa a enviar os pacotes	
-        while acabou == False:
-            if n_pacote == num_pacotes:
-                acabou = True
-            payload, byteslactea = pegar_payload(byteslactea)
-            mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
-            ultimo_enviado = mensagem
-            com1.sendData(mensagem)
+        lista_imagens = ["rango.jpg","lactea.jpg",]
+        for img in lista_imagens:
+            acabou = False
+            byteslactea = open(img, "rb").read()
+            
+            if len(byteslactea) % 140>0:
+                num_pacotes = len(byteslactea)//140 + 1       
+            else:
+                num_pacotes = len(byteslactea)//140
+            print(f"Numero de pacotes: {num_pacotes}")
+            #envia o tipo 1
+            enviar = constroi_head(1,num_pacotes,0,0)+constroi_eop()
+            com1.sendData(enviar)
+            print("enviei o primeiro comando")
             header,nr1 = com1.getData(10)
-            tipo = int.from_bytes(header[0], byteorder='big')
-            if tipo == 6:
-                print("Erro! Tipo 6 recebido")
-                teve_problema = True
-            eop,nr1 = com1.getData(4)
-            if eop != constroi_eop():
-                print("Erro no EOP")
-                teve_problema = True
-            if tipo == 4:
-                print("Pacote recebido com sucesso")
-                n_pacote += 1
-            while teve_problema == True:
-                com1.sendData(ultimo_enviado)
+            tipo = header[0]
+            if tipo == 2:
+                print("Pode começar a enviar os pacotes")
+            else:
+                print("Erro! Tipo 2 não recebido")
+                com1.disable()
+            n_pacote = 1
+            teve_problema = False
+            acabou = False
+            #Começa a enviar os pacotes	
+            while acabou == False:
+                if n_pacote == num_pacotes:
+                    acabou = True
+                payload, byteslactea = pegar_payload(byteslactea)
+                mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
+                ultimo_enviado = mensagem
+                com1.sendData(mensagem)
+                #print(f"Enviando pacote {n_pacote}")
                 header,nr1 = com1.getData(10)
-                tipo = int.from_bytes(header[0], byteorder='big')
+                tipo = header[0]
+                if tipo == 6:
+                    #print("Erro! Tipo 6 recebido")
+                    teve_problema = True
                 eop,nr1 = com1.getData(4)
                 if eop != constroi_eop():
-                    print("Erro no EOP")
+                    #print("Erro no EOP")
                     teve_problema = True
-                elif tipo == 6:
-                    print("Erro! Tipo 6 recebido")
-                    teve_problema = True
-                else:
-                    teve_problema = False
+                if tipo == 4:
+                    #print("Pacote recebido com sucesso")
+                    n_pacote += 1
+                while teve_problema == True:
+                    print("Reenviando pacote")
+                    com1.sendData(ultimo_enviado)
+                    header,nr1 = com1.getData(10)
+                    tipo = header[0]
+                    eop,nr1 = com1.getData(4)
+                    if eop != constroi_eop():
+                        #print("Erro no EOP")
+                        teve_problema = True
+                    elif tipo == 6:
+                        #print("Erro! Tipo 6 recebido")
+                        teve_problema = True
+                    else:
+                        teve_problema = False
          # Encerra comunicação
         print("-------------------------")
         print("Comunicação encerrada")
