@@ -89,6 +89,9 @@ def main():
         print("Abriu a comunicação")
         lista_imagens = ["rango.jpg","lactea.jpg",]
         for img in lista_imagens:
+            tempo_inicial = time.time()
+            with open('log.txt', 'a') as log:
+                log.write(f"Começou o envio do arquivo {img}\n")
             acabou = False
             byteslactea = open(img, "rb").read()
             
@@ -115,6 +118,14 @@ def main():
             while acabou == False:
                 if n_pacote == num_pacotes:
                     acabou = True
+                    tempo_final = time.time()
+                    print(f"Tempo total: {tempo_final - tempo_inicial}")
+                    razao = len(byteslactea)/(tempo_final - tempo_inicial)
+                    print(f"Taxa de transmissão: {razao} bytes/s")
+                    with open('log.txt', 'a') as log:
+                        log.write(f"Terminou o envio do arquivo {img}\n")
+                        log.write(f"Tempo total: {tempo_final - tempo_inicial}\n")
+                        log.write(f"Taxa de transmissão: {razao} bytes/s\n")
                 payload, byteslactea = pegar_payload(byteslactea)
                 mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
                 ultimo_enviado = mensagem
@@ -124,10 +135,14 @@ def main():
                 tipo = header[0]
                 if tipo == 6:
                     #print("Erro! Tipo 6 recebido")
+                    with open('log.txt', 'a') as log:
+                        log.write(f"Erro! Tipo 6 recebido no pacote de numero {n_pacote}\n")
                     teve_problema = True
                 eop,nr1 = com1.getData(4)
                 if eop != constroi_eop():
                     #print("Erro no EOP")
+                    with open('log.txt', 'a') as log:
+                        log.write(f"Erro no EOP no pacote de numero {n_pacote}\n")
                     teve_problema = True
                 if tipo == 4:
                     #print("Pacote recebido com sucesso")
@@ -141,9 +156,13 @@ def main():
                     if eop != constroi_eop():
                         #print("Erro no EOP")
                         teve_problema = True
+                        with open('log.txt', 'a') as log:
+                            log.write(f"Erro no EOP no pacote de numero {n_pacote}\n")
                     elif tipo == 6:
                         #print("Erro! Tipo 6 recebido")
                         teve_problema = True
+                        with open('log.txt', 'a') as log:
+                            log.write(f"Erro! Tipo  recebido no pacote de numero {n_pacote}\n")
                     else:
                         teve_problema = False
          # Encerra comunicação
