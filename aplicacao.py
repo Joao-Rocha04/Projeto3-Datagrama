@@ -131,6 +131,16 @@ def main():
                 ultimo_enviado = mensagem
                 com1.sendData(mensagem)
                 #print(f"Enviando pacote {n_pacote}")
+
+                tamanho = com1.rx.getBufferLen()
+                tempo_inicial_time_out = time.time()
+                tempo_decorrido_time_out = 0
+                while tamanho == 0 and tempo_decorrido_time_out < 10:
+                    tamanho = com1.rx.getBufferLen()
+                    tempo_decorrido_time_out = time.time() - tempo_inicial_time_out
+                    if tempo_decorrido_time_out > 10:
+                        print("Tempo limite excedido!!")
+                        com1.disable()
                 header,nr1 = com1.getData(10)
                 tipo = header[0]
                 if tipo == 6:
@@ -150,6 +160,15 @@ def main():
                 while teve_problema == True:
                     print("Reenviando pacote")
                     com1.sendData(ultimo_enviado)
+                    tamanho = com1.rx.getBufferLen()
+                    tempo_inicial_time_out = time.time()
+                    tempo_decorrido_time_out = 0
+                    while tamanho == 0 and tempo_decorrido_time_out < 10:
+                        tamanho = com1.rx.getBufferLen()
+                        tempo_decorrido_time_out = time.time() - tempo_inicial_time_out
+                        if tempo_decorrido_time_out > 10:
+                            print("Tempo limite excedido!!")
+                            com1.disable()
                     header,nr1 = com1.getData(10)
                     tipo = header[0]
                     eop,nr1 = com1.getData(4)
