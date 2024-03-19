@@ -78,7 +78,6 @@ def main():
         com1 = enlace(serialName)
         com1.enable()
         ultimo_enviado = b""
-        
     
         # Ativa comunicacao. Inicia os threads e a comunicação seiral 
         # com1.enable()
@@ -94,13 +93,17 @@ def main():
                 log.write(f"Começou o envio do arquivo {img}\n")
             acabou = False
             byteslactea = open(img, "rb").read()
-            
-            if len(byteslactea) % 140>0:
-                num_pacotes = len(byteslactea)//140 + 1       
-            else:
-                num_pacotes = len(byteslactea)//140
-            print(f"Numero de pacotes: {num_pacotes}")
+            lista_payloads = []
+            while byteslactea != b"":
+                payload, byteslactea = pegar_payload(byteslactea)
+                lista_payloads.append(payload)
+            # if len(byteslactea) % 140>0:
+            #     num_pacotes = len(byteslactea)//140 + 1       
+            # else:
+            #     num_pacotes = len(byteslactea)//140
+            print(f"Numero de pacotes: {len(lista_payloads)}")
             #envia o tipo 1
+            num_pacotes = len(lista_payloads)
             enviar = constroi_head(1,num_pacotes,0,0)+constroi_eop()
             com1.sendData(enviar)
             print("enviei o primeiro comando")
@@ -111,11 +114,12 @@ def main():
             else:
                 print("Erro! Tipo 2 não recebido")
                 com1.disable()
-            n_pacote = 1
+            n_pacote = 8
             teve_problema = False
             acabou = False
             #Começa a enviar os pacotes	
             while acabou == False:
+                print(n_pacote)
                 if n_pacote == num_pacotes:
                     acabou = True
                     tempo_final = time.time()
@@ -126,27 +130,28 @@ def main():
                         log.write(f"Terminou o envio do arquivo {img}\n")
                         log.write(f"Tempo total: {tempo_final - tempo_inicial}\n")
                         log.write(f"Taxa de transmissão: {razao} bytes/s\n")
-                payload, byteslactea = pegar_payload(byteslactea)
+                payload = lista_payloads[n_pacote-1]
                 mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
                 ultimo_enviado = mensagem
                 com1.sendData(mensagem)
                 #print(f"Enviando pacote {n_pacote}")
-
+                #flag = True
                 tamanho = com1.rx.getBufferLen()
-                tempo_inicial_time_out = time.time()
-                tempo_decorrido_time_out = 0
-                while tamanho == 0 and tempo_decorrido_time_out < 10:
+                tempo_inicial = time.time()
+                tempo_decorrido = 0
+                while tamanho == 0:
+                    tempo_decorrido = time.time() - tempo_inicial
+                    if tempo_decorrido>1:
+                        com1.sendData(mensagem)
                     tamanho = com1.rx.getBufferLen()
-                    tempo_decorrido_time_out = time.time() - tempo_inicial_time_out
-                    if tempo_decorrido_time_out > 10:
-                        print("Tempo limite excedido!!")
-                        com1.disable()
                 header,nr1 = com1.getData(10)
+                print(f"header recebido: {header}")
                 tipo = header[0]
                 if tipo == 6:
-                    #print("Erro! Tipo 6 recebido")
+                    n_pacote = header[1]
                     with open('log.txt', 'a') as log:
                         log.write(f"Erro! Tipo 6 recebido no pacote de numero {n_pacote}\n")
+                    #print("Erro! Tipo 6 recebido")
                     teve_problema = True
                 eop,nr1 = com1.getData(4)
                 if eop != constroi_eop():
@@ -155,21 +160,22 @@ def main():
                         log.write(f"Erro no EOP no pacote de numero {n_pacote}\n")
                     teve_problema = True
                 if tipo == 4:
-                    #print("Pacote recebido com sucesso")
+                    print("Pacote recebido com sucesso")
                     n_pacote += 1
                 while teve_problema == True:
                     print("Reenviando pacote")
-                    com1.sendData(ultimo_enviado)
+                    payload = lista_payloads[n_pacote-1]
+                    mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
+                    com1.sendData(mensagem)
                     tamanho = com1.rx.getBufferLen()
-                    tempo_inicial_time_out = time.time()
-                    tempo_decorrido_time_out = 0
-                    while tamanho == 0 and tempo_decorrido_time_out < 10:
+                    while tamanho == 0:
+                        tempo_decorrido = time.time() - tempo_inicial
+                        if tempo_decorrido>2:
+                            print("estou enviando tirando o fio")
+                            com1.sendData(ultimo_enviado)
                         tamanho = com1.rx.getBufferLen()
-                        tempo_decorrido_time_out = time.time() - tempo_inicial_time_out
-                        if tempo_decorrido_time_out > 10:
-                            print("Tempo limite excedido!!")
-                            com1.disable()
                     header,nr1 = com1.getData(10)
+                    print(f"header recebido: {header}")
                     tipo = header[0]
                     eop,nr1 = com1.getData(4)
                     if eop != constroi_eop():
@@ -178,11 +184,13 @@ def main():
                         with open('log.txt', 'a') as log:
                             log.write(f"Erro no EOP no pacote de numero {n_pacote}\n")
                     elif tipo == 6:
-                        #print("Erro! Tipo 6 recebido")
+                        n_pacote = header[1]
+                        print("Erro! Tipo 6 recebido")
                         teve_problema = True
                         with open('log.txt', 'a') as log:
                             log.write(f"Erro! Tipo  recebido no pacote de numero {n_pacote}\n")
                     else:
+                        n_pacote += 1
                         teve_problema = False
          # Encerra comunicação
         print("-------------------------")
