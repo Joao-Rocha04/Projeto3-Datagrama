@@ -14,6 +14,7 @@ from enlace import *
 import time
 import numpy as np
 import random
+from crc import Calculator,Crc16
 
 # voce deverá descomentar e configurar a porta com através da qual ira fazer comunicaçao
 #   para saber a sua porta, execute no terminal :
@@ -38,14 +39,15 @@ def temporizador(com1):
             print("Tempo limite excedido!!")
             com1.disable()  
             break
-def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload):
+def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload,imagem):
     head = b""
     match tipo:
         case 1:
             head+=b"\x01"
             head+=b"\xa9"
             head+=num_pacotes.to_bytes(1,byteorder="big")
-            head+=b"\x00\x00\x00\x00\x00\x00\x00"
+            head+= imagem.to_bytes(1,byteorder="big")
+            head+=b"\x00\x00\x00\x00\x00\x00"
         case 3:
             head+=b"\x03"
             head+=n_pacote_enviado.to_bytes(1,byteorder="big")
@@ -73,6 +75,7 @@ def constroi_eop():
 def main():
     try:
         print("Iniciou o main")
+        calculator = Calculator(Crc16.CCITT)
         #declaramos um objeto do tipo enlace com o nome "com". Essa é a camada inferior à aplicação. Observe que um parametro
         #para declarar esse objeto é o nome da porta.
         com1 = enlace(serialName)
@@ -86,13 +89,15 @@ def main():
         time.sleep(.1)
         #Se chegamos até aqui, a comunicação foi aberta com sucesso. Faça um print para informar.
         print("Abriu a comunicação")
-        lista_imagens = ["rango.jpg","lactea.jpg",]
+        lista_imagens = [1,2]
         for img in lista_imagens:
             tempo_inicial = time.time()
             with open('log.txt', 'a') as log:
                 log.write(f"Começou o envio do arquivo {img}\n")
+                log.write(f"Extensão do arquivo: jpg\n")
+                log.write(f"Hora atual: {time.strftime('%H:%M:%S')}\n")
             acabou = False
-            byteslactea = open(img, "rb").read()
+            byteslactea = open(str(img)+'.jpg', "rb").read()
             lista_payloads = []
             while byteslactea != b"":
                 payload, byteslactea = pegar_payload(byteslactea)
@@ -104,7 +109,7 @@ def main():
             print(f"Numero de pacotes: {len(lista_payloads)}")
             #envia o tipo 1
             num_pacotes = len(lista_payloads)
-            enviar = constroi_head(1,num_pacotes,0,0)+constroi_eop()
+            enviar = constroi_head(1,num_pacotes,0,0,img)+constroi_eop()
             com1.sendData(enviar)
             print("enviei o primeiro comando")
             header,nr1 = com1.getData(10)
@@ -114,7 +119,7 @@ def main():
             else:
                 print("Erro! Tipo 2 não recebido")
                 com1.disable()
-            n_pacote = 8
+            n_pacote = 1
             teve_problema = False
             acabou = False
             #Começa a enviar os pacotes	
@@ -124,14 +129,15 @@ def main():
                     acabou = True
                     tempo_final = time.time()
                     print(f"Tempo total: {tempo_final - tempo_inicial}")
-                    razao = len(byteslactea)/(tempo_final - tempo_inicial)
+                    tamanho = len(lista_payloads)
+                    razao = ((tamanho-1)*140) + len(lista_payloads[tamanho-1])/(tempo_final - tempo_inicial)
                     print(f"Taxa de transmissão: {razao} bytes/s")
-                    with open('log.txt', 'a') as log:
+                    with open(f'log{img}.txt', 'a') as log:
                         log.write(f"Terminou o envio do arquivo {img}\n")
                         log.write(f"Tempo total: {tempo_final - tempo_inicial}\n")
                         log.write(f"Taxa de transmissão: {razao} bytes/s\n")
                 payload = lista_payloads[n_pacote-1]
-                mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
+                mensagem = constroi_head(3,0,n_pacote,len(payload),img)+payload+constroi_eop()
                 ultimo_enviado = mensagem
                 com1.sendData(mensagem)
                 #print(f"Enviando pacote {n_pacote}")
@@ -141,38 +147,41 @@ def main():
                 tempo_decorrido = 0
                 while tamanho == 0:
                     tempo_decorrido = time.time() - tempo_inicial
-                    if tempo_decorrido>1:
+                    if tempo_decorrido > 1:
                         com1.sendData(mensagem)
+                        tempo_decorrido = 0
                     tamanho = com1.rx.getBufferLen()
                 header,nr1 = com1.getData(10)
                 print(f"header recebido: {header}")
                 tipo = header[0]
                 if tipo == 6:
                     n_pacote = header[1]
-                    with open('log.txt', 'a') as log:
+                    with open(f'log{img}.txt', 'a') as log:
                         log.write(f"Erro! Tipo 6 recebido no pacote de numero {n_pacote}\n")
                     #print("Erro! Tipo 6 recebido")
                     teve_problema = True
                 eop,nr1 = com1.getData(4)
                 if eop != constroi_eop():
-                    #print("Erro no EOP")
-                    with open('log.txt', 'a') as log:
+                    with open(f'log{img}.txt', 'a') as log:
                         log.write(f"Erro no EOP no pacote de numero {n_pacote}\n")
                     teve_problema = True
                 if tipo == 4:
                     print("Pacote recebido com sucesso")
+                    with open(f'log{img}.txt', 'a') as log:
+                        log.write(f"Pacote {n_pacote} enviado com sucesso\n")
                     n_pacote += 1
                 while teve_problema == True:
                     print("Reenviando pacote")
                     payload = lista_payloads[n_pacote-1]
-                    mensagem = constroi_head(3,0,n_pacote,len(payload))+payload+constroi_eop()
+                    mensagem = constroi_head(3,0,n_pacote,len(payload),img)+payload+constroi_eop()
                     com1.sendData(mensagem)
                     tamanho = com1.rx.getBufferLen()
                     while tamanho == 0:
                         tempo_decorrido = time.time() - tempo_inicial
-                        if tempo_decorrido>2:
+                        if tempo_decorrido > 1:
                             print("estou enviando tirando o fio")
-                            com1.sendData(ultimo_enviado)
+                            com1.sendData(mensagem)
+                            tempo_decorrido = 0
                         tamanho = com1.rx.getBufferLen()
                     header,nr1 = com1.getData(10)
                     print(f"header recebido: {header}")
@@ -181,13 +190,13 @@ def main():
                     if eop != constroi_eop():
                         #print("Erro no EOP")
                         teve_problema = True
-                        with open('log.txt', 'a') as log:
+                        with open(f'log{img}.txt', 'a') as log:
                             log.write(f"Erro no EOP no pacote de numero {n_pacote}\n")
                     elif tipo == 6:
                         n_pacote = header[1]
                         print("Erro! Tipo 6 recebido")
                         teve_problema = True
-                        with open('log.txt', 'a') as log:
+                        with open(f'log{img}.txt', 'a') as log:
                             log.write(f"Erro! Tipo  recebido no pacote de numero {n_pacote}\n")
                     else:
                         n_pacote += 1
