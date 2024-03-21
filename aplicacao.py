@@ -39,7 +39,7 @@ def temporizador(com1):
             print("Tempo limite excedido!!")
             com1.disable()  
             break
-def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload,imagem):
+def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload,imagem,crc=0):
     head = b""
     match tipo:
         case 1:
@@ -52,7 +52,8 @@ def constroi_head(tipo,num_pacotes,n_pacote_enviado,tamanho_payload,imagem):
             head+=b"\x03"
             head+=n_pacote_enviado.to_bytes(1,byteorder="big")
             head+=tamanho_payload.to_bytes(1,byteorder="big")
-            head+=b"\x00\x00\x00\x00\x00\x00\x00"
+            head+= crc.to_bytes(2,byteorder="big")
+            head+=b"\x00\x00\x00\x00\x00"
         case 5:
             head+=b"\x05"
             head+=b"\xa9"
@@ -92,16 +93,22 @@ def main():
         lista_imagens = [1,2]
         for img in lista_imagens:
             tempo_inicial = time.time()
-            with open('log.txt', 'a') as log:
+            with open(f'log{str(img)}.txt', 'a') as log:
                 log.write(f"Começou o envio do arquivo {img}\n")
                 log.write(f"Extensão do arquivo: jpg\n")
-                log.write(f"Hora atual: {time.strftime('%H:%M:%S')}\n")
+                log.write(f"Hora de inicio: {time.strftime('%H:%M:%S')}\n")
             acabou = False
             byteslactea = open(str(img)+'.jpg', "rb").read()
             lista_payloads = []
             while byteslactea != b"":
                 payload, byteslactea = pegar_payload(byteslactea)
                 lista_payloads.append(payload)
+
+            crc = calculator.checksum(lista_payloads[0])
+            print(crc)
+            crc_bytes = crc.to_bytes(2,byteorder="big")
+            print( crc == int.from_bytes(crc_bytes,byteorder="big"))
+            
             # if len(byteslactea) % 140>0:
             #     num_pacotes = len(byteslactea)//140 + 1       
             # else:
@@ -135,10 +142,11 @@ def main():
                     with open(f'log{img}.txt', 'a') as log:
                         log.write(f"Terminou o envio do arquivo {img}\n")
                         log.write(f"Tempo total: {tempo_final - tempo_inicial}\n")
+                        log.write(f"Hora de termino: {time.strftime('%H:%M:%S')}\n")
                         log.write(f"Taxa de transmissão: {razao} bytes/s\n")
                 payload = lista_payloads[n_pacote-1]
-                mensagem = constroi_head(3,0,n_pacote,len(payload),img)+payload+constroi_eop()
-                ultimo_enviado = mensagem
+                crc = calculator.checksum(payload)
+                mensagem = constroi_head(3,0,n_pacote,len(payload),img,crc)+payload+constroi_eop()
                 com1.sendData(mensagem)
                 #print(f"Enviando pacote {n_pacote}")
                 #flag = True
@@ -173,13 +181,13 @@ def main():
                 while teve_problema == True:
                     print("Reenviando pacote")
                     payload = lista_payloads[n_pacote-1]
-                    mensagem = constroi_head(3,0,n_pacote,len(payload),img)+payload+constroi_eop()
+                    crc = calculator.checksum(payload)
+                    mensagem = constroi_head(3,0,n_pacote,len(payload),img,crc)+payload+constroi_eop()
                     com1.sendData(mensagem)
                     tamanho = com1.rx.getBufferLen()
                     while tamanho == 0:
                         tempo_decorrido = time.time() - tempo_inicial
                         if tempo_decorrido > 1:
-                            print("estou enviando tirando o fio")
                             com1.sendData(mensagem)
                             tempo_decorrido = 0
                         tamanho = com1.rx.getBufferLen()

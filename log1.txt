@@ -1,3 +1,6 @@
+Começou o envio do arquivo 1
+Extensão do arquivo: jpg
+Hora de inicio: 14:41:09
 Pacote 1 enviado com sucesso
 Pacote 2 enviado com sucesso
 Pacote 3 enviado com sucesso
@@ -16,8 +19,9 @@ Pacote 15 enviado com sucesso
 Pacote 16 enviado com sucesso
 Pacote 17 enviado com sucesso
 Pacote 18 enviado com sucesso
-Pacote 19 enviado com sucesso
-Pacote 20 enviado com sucesso
+Erro! Tipo 6 recebido no pacote de numero 19
+Erro! Tipo  recebido no pacote de numero 19
+Erro! Tipo 6 recebido no pacote de numero 20
 Pacote 21 enviado com sucesso
 Pacote 22 enviado com sucesso
 Pacote 23 enviado com sucesso
@@ -36,16 +40,21 @@ Pacote 35 enviado com sucesso
 Pacote 36 enviado com sucesso
 Pacote 37 enviado com sucesso
 Pacote 38 enviado com sucesso
-Pacote 39 enviado com sucesso
-Pacote 40 enviado com sucesso
-Pacote 41 enviado com sucesso
-Pacote 42 enviado com sucesso
-Pacote 43 enviado com sucesso
-Pacote 44 enviado com sucesso
-Pacote 45 enviado com sucesso
-Pacote 46 enviado com sucesso
-Pacote 47 enviado com sucesso
-Pacote 48 enviado com sucesso
+Erro! Tipo 6 recebido no pacote de numero 40
+Erro! Tipo  recebido no pacote de numero 40
+Erro! Tipo  recebido no pacote de numero 40
+Erro! Tipo  recebido no pacote de numero 40
+Erro! Tipo 6 recebido no pacote de numero 41
+Erro! Tipo  recebido no pacote de numero 41
+Erro! Tipo 6 recebido no pacote de numero 42
+Erro! Tipo 6 recebido no pacote de numero 43
+Erro! Tipo  recebido no pacote de numero 43
+Erro! Tipo 6 recebido no pacote de numero 44
+Erro! Tipo  recebido no pacote de numero 44
+Erro! Tipo 6 recebido no pacote de numero 45
+Erro! Tipo 6 recebido no pacote de numero 46
+Erro! Tipo 6 recebido no pacote de numero 47
+Erro! Tipo 6 recebido no pacote de numero 48
 Pacote 49 enviado com sucesso
 Pacote 50 enviado com sucesso
 Pacote 51 enviado com sucesso
@@ -114,6 +123,17 @@ Pacote 113 enviado com sucesso
 Pacote 114 enviado com sucesso
 Pacote 115 enviado com sucesso
 Terminou o envio do arquivo 1
-Tempo total: 0.6783654689788818
-Taxa de transmissão: 16282.792323121417 bytes/s
+Tempo total: 0.4937152862548828
+Hora de termino: 14:42:27
+Taxa de transmissão: 16351.156898423405 bytes/s
 Pacote 116 enviado com sucesso
+Começou o envio do arquivo 1
+Extensão do arquivo: jpg
+Hora de inicio: 14:44:13
+Pacote 1 enviado com sucesso
+Pacote 2 enviado com sucesso
+Pacote 3 enviado com sucesso
+Pacote 4 enviado com sucesso
+Pacote 5 enviado com sucesso
+Pacote 6 enviado com sucesso
+Pacote 7 enviado com sucesso

@@ -1,3 +1,6 @@
+Começou o envio do arquivo 2
+Extensão do arquivo: jpg
+Hora de inicio: 14:42:28
 Pacote 1 enviado com sucesso
 Pacote 2 enviado com sucesso
 Pacote 3 enviado com sucesso
@@ -105,6 +108,7 @@ Pacote 104 enviado com sucesso
 Pacote 105 enviado com sucesso
 Pacote 106 enviado com sucesso
 Terminou o envio do arquivo 2
-Tempo total: 0.6172752380371094
-Taxa de transmissão: 14849.720137193708 bytes/s
+Tempo total: 0.5399532318115234
+Hora de termino: 14:43:28
+Taxa de transmissão: 14851.112073502867 bytes/s
 Pacote 107 enviado com sucesso
